@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#141928">
+  <meta name="description" content="Fotoğraflarını cihazında, güvenle PDF'e dönüştür.">
+  <title>Ödev PDF</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23141928'/%3E%3Cpath d='M19 12h18l10 10v30H19z' fill='%23fff'/%3E%3Cpath d='M37 12v11h10' fill='none' stroke='%23ff715b' stroke-width='4'/%3E%3Cpath d='M25 39h16M25 45h11' stroke='%23141928' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f7f8fb;
+      --muted: #aeb5c9;
+      --bg: #0b0e17;
+      --panel: #141928;
+      --panel-2: #1b2132;
+      --line: rgba(255,255,255,.1);
+      --accent: #ff715b;
+      --accent-2: #ff9c5a;
+      --success: #55d69e;
+      --danger: #ff8f81;
+      --shadow: 0 24px 70px rgba(0,0,0,.35);
+      --radius: 24px;
+    }
+
+    * { box-sizing: border-box; }
+    html { min-height: 100%; background: var(--bg); }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 0%, rgba(255,113,91,.18), transparent 30rem),
+        radial-gradient(circle at 100% 70%, rgba(86,108,255,.11), transparent 26rem),
+        var(--bg);
+      font-family: ui-rounded, "SF Pro Rounded", "SF Pro Display", Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input { font: inherit; }
+    button { -webkit-tap-highlight-color: transparent; }
+
+    .shell {
+      width: min(100% - 28px, 720px);
+      margin: 0 auto;
+      padding: max(24px, env(safe-area-inset-top)) 0 max(28px, env(safe-area-inset-bottom));
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: linear-gradient(145deg, var(--accent), var(--accent-2));
+      box-shadow: 0 10px 28px rgba(255,113,91,.24);
+    }
+    .brand-mark svg { width: 24px; height: 24px; }
+    .brand-name { margin: 0; font-size: 1.12rem; letter-spacing: -.02em; }
+    .privacy-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--muted);
+      font-size: .78rem;
+      font-weight: 650;
+    }
+    .privacy-pill svg { color: var(--success); flex: 0 0 auto; }
+
+    .intro { margin: 10px 0 24px; }
+    h1 {
+      max-width: 600px;
+      margin: 0 0 12px;
+      font-size: clamp(2.2rem, 8vw, 4rem);
+      line-height: .98;
+      letter-spacing: -.055em;
+    }
+    .intro p {
+      margin: 0;
+      max-width: 510px;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.55;
+    }
+
+    .workspace {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(20,25,40,.82);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(20px);
+    }
+
+    .drop-zone {
+      position: relative;
+      display: grid;
+      place-items: center;
+      min-height: 240px;
+      padding: 34px 24px;
+      border: 0;
+      background:
+        linear-gradient(var(--panel), var(--panel)) padding-box,
+        repeating-linear-gradient(125deg, rgba(255,255,255,.14) 0 8px, transparent 8px 16px) border-box;
+      text-align: center;
+      transition: background .2s ease, transform .2s ease;
+    }
+    .drop-zone.dragging { background: rgba(255,113,91,.12); }
+    .upload-icon {
+      width: 68px;
+      height: 68px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 18px;
+      border-radius: 22px;
+      color: var(--accent);
+      background: rgba(255,113,91,.1);
+      border: 1px solid rgba(255,113,91,.2);
+    }
+    .upload-icon svg { width: 31px; height: 31px; }
+    .drop-zone h2 { margin: 0 0 7px; font-size: 1.18rem; letter-spacing: -.02em; }
+    .drop-zone p { margin: 0 0 20px; color: var(--muted); font-size: .9rem; }
+    #fileInput { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+    .primary, .secondary {
+      min-height: 52px;
+      border: 0;
+      border-radius: 16px;
+      padding: 0 20px;
+      font-weight: 760;
+      cursor: pointer;
+      transition: transform .16s ease, filter .16s ease, opacity .16s ease;
+    }
+    .primary {
+      color: #1b1010;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 10px 24px rgba(255,113,91,.18);
+    }
+    .secondary { color: var(--ink); background: var(--panel-2); border: 1px solid var(--line); }
+    .primary:active, .secondary:active, .icon-btn:active { transform: scale(.97); }
+    .primary:disabled { opacity: .55; cursor: wait; }
+
+    .photo-section { display: none; border-top: 1px solid var(--line); }
+    .photo-section.visible { display: block; }
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 20px 12px;
+    }
+    .section-head h2 { margin: 0; font-size: 1rem; }
+    .count { color: var(--muted); font-size: .84rem; }
+    .photo-list { display: grid; gap: 10px; padding: 0 14px 14px; }
+    .photo-card {
+      display: grid;
+      grid-template-columns: 78px 1fr auto;
+      align-items: center;
+      gap: 13px;
+      min-width: 0;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255,255,255,.025);
+    }
+    .photo-card img { width: 78px; height: 72px; object-fit: cover; border-radius: 12px; background: #090b12; }
+    .photo-info { min-width: 0; }
+    .photo-name { overflow: hidden; margin: 0 0 5px; font-size: .9rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .photo-meta { margin: 0; color: var(--muted); font-size: .76rem; }
+    .photo-actions { display: grid; grid-template-columns: repeat(2, 38px); gap: 5px; }
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--muted);
+      background: var(--panel-2);
+      cursor: pointer;
+    }
+    .icon-btn.remove { color: var(--danger); }
+    .icon-btn:disabled { opacity: .28; cursor: default; }
+    .icon-btn svg { width: 17px; height: 17px; }
+
+    .controls { display: none; gap: 10px; padding: 18px 20px 20px; border-top: 1px solid var(--line); }
+    .controls.visible { display: grid; grid-template-columns: 1fr auto; }
+    .controls .primary { width: 100%; }
+
+    .status {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      margin: 14px 20px 0;
+      padding: 13px 15px;
+      border-radius: 14px;
+      color: var(--ink);
+      background: rgba(85,214,158,.1);
+      border: 1px solid rgba(85,214,158,.2);
+      font-size: .88rem;
+    }
+    .status.visible { display: flex; }
+    .status.error { background: rgba(255,143,129,.1); border-color: rgba(255,143,129,.2); }
+
+    footer { padding: 22px 4px 0; color: var(--muted); text-align: center; font-size: .78rem; line-height: 1.5; }
+    footer strong { color: var(--ink); }
+
+    @media (max-width: 520px) {
+      .shell { width: min(100% - 20px, 720px); }
+      header { margin-bottom: 30px; }
+      .brand-mark { width: 40px; height: 40px; border-radius: 13px; }
+      .privacy-pill span { display: none; }
+      .workspace { border-radius: 22px; }
+      .drop-zone { min-height: 230px; }
+      .photo-card { grid-template-columns: 64px 1fr auto; gap: 10px; }
+      .photo-card img { width: 64px; height: 64px; }
+      .photo-actions { grid-template-columns: repeat(2, 34px); }
+      .icon-btn { width: 34px; height: 34px; border-radius: 10px; }
+      .controls.visible { grid-template-columns: 1fr; }
+      #shareBtn { order: 2; }
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .workspace { animation: rise .5s cubic-bezier(.2,.8,.2,1) both; }
+      @keyframes rise { from { opacity: 0; transform: translateY(12px); } }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M7 3h7l4 4v14H7z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M14 3v5h4M10 13h5M10 17h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <p class="brand-name"><strong>Ödev PDF</strong></p>
+      </div>
+      <div class="privacy-pill" title="Dosyalarınız cihazınızdan çıkmaz">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 10V8a5 5 0 0110 0v2M6 10h12v10H6z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        <span>Cihazında kalır</span>
+      </div>
+    </header>
+
+    <section class="intro">
+      <h1>Fotoğraflarını<br>PDF yap.</h1>
+      <p>Ödev fotoğraflarını seç, sırasını düzenle ve tek bir PDF olarak indir.</p>
+    </section>
+
+    <section class="workspace" aria-label="PDF oluşturucu">
+      <div class="drop-zone" id="dropZone">
+        <div>
+          <div class="upload-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 16.5V19h16v-2.5M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <h2>Fotoğraflarını ekle</h2>
+          <p>Kameradan çekebilir veya galeriden seçebilirsin.</p>
+          <button class="primary" id="chooseBtn" type="button">Fotoğraf Seç</button>
+          <input id="fileInput" type="file" accept="image/*" multiple aria-label="Fotoğraf seç">
+        </div>
+      </div>
+
+      <div class="photo-section" id="photoSection">
+        <div class="section-head">
+          <h2>Sayfalar</h2>
+          <span class="count" id="countText">0 fotoğraf</span>
+        </div>
+        <div class="photo-list" id="photoList"></div>
+      </div>
+
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+
+      <div class="controls" id="controls">
+        <button class="primary" id="downloadBtn" type="button">PDF’yi Oluştur ve İndir</button>
+        <button class="secondary" id="shareBtn" type="button" hidden>Paylaş</button>
+      </div>
+    </section>
+
+    <footer><strong>Gizlilik:</strong> Fotoğrafların internete yüklenmez; PDF doğrudan bu cihazda hazırlanır.</footer>
+  </main>
+
+  <script>
+    (() => {
+      const $ = (selector) => document.querySelector(selector);
+      const fileInput = $('#fileInput');
+      const chooseBtn = $('#chooseBtn');
+      const dropZone = $('#dropZone');
+      const photoSection = $('#photoSection');
+      const photoList = $('#photoList');
+      const countText = $('#countText');
+      const controls = $('#controls');
+      const downloadBtn = $('#downloadBtn');
+      const shareBtn = $('#shareBtn');
+      const status = $('#status');
+      let photos = [];
+      let lastPdf = null;
+
+      const icons = {
+        up: '<svg viewBox="0 0 24 24" fill="none"><path d="M12 19V5m0 0L6.5 10.5M12 5l5.5 5.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+        down: '<svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14m0 0l-5.5-5.5M12 19l5.5-5.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+        remove: '<svg viewBox="0 0 24 24" fill="none"><path d="M5 7h14M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      };
+
+      chooseBtn.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', (event) => addFiles(event.target.files));
+
+      ['dragenter', 'dragover'].forEach(type => dropZone.addEventListener(type, (event) => {
+        event.preventDefault();
+        dropZone.classList.add('dragging');
+      }));
+      ['dragleave', 'drop'].forEach(type => dropZone.addEventListener(type, (event) => {
+        event.preventDefault();
+        dropZone.classList.remove('dragging');
+      }));
+      dropZone.addEventListener('drop', (event) => addFiles(event.dataTransfer.files));
+
+      function addFiles(fileList) {
+        const files = [...fileList].filter(file => file.type.startsWith('image/'));
+        for (const file of files) {
+          photos.push({ id: crypto.randomUUID ? crypto.randomUUID() : Date.now() + Math.random(), file, url: URL.createObjectURL(file) });
+        }
+        fileInput.value = '';
+        lastPdf = null;
+        hideStatus();
+        render();
+      }
+
+      function render() {
+        const hasPhotos = photos.length > 0;
+        photoSection.classList.toggle('visible', hasPhotos);
+        controls.classList.toggle('visible', hasPhotos);
+        countText.textContent = `${photos.length} fotoğraf`;
+        photoList.innerHTML = '';
+
+        photos.forEach((photo, index) => {
+          const card = document.createElement('article');
+          card.className = 'photo-card';
+          card.innerHTML = `
+            <img src="${photo.url}" alt="${index + 1}. sayfa önizlemesi">
+            <div class="photo-info">
+              <p class="photo-name">${escapeHtml(photo.file.name || `Fotoğraf ${index + 1}`)}</p>
+              <p class="photo-meta">PDF’de ${index + 1}. sayfa</p>
+            </div>
+            <div class="photo-actions">
+              <button class="icon-btn" data-action="up" aria-label="Yukarı taşı" ${index === 0 ? 'disabled' : ''}>${icons.up}</button>
+              <button class="icon-btn" data-action="down" aria-label="Aşağı taşı" ${index === photos.length - 1 ? 'disabled' : ''}>${icons.down}</button>
+              <button class="icon-btn remove" data-action="remove" aria-label="Fotoğrafı kaldır">${icons.remove}</button>
+            </div>`;
+
+          card.addEventListener('click', (event) => {
+            const action = event.target.closest('button')?.dataset.action;
+            if (!action) return;
+            if (action === 'remove') {
+              URL.revokeObjectURL(photos[index].url);
+              photos.splice(index, 1);
+            } else {
+              const next = action === 'up' ? index - 1 : index + 1;
+              [photos[index], photos[next]] = [photos[next], photos[index]];
+            }
+            lastPdf = null;
+            hideStatus();
+            render();
+          });
+          photoList.appendChild(card);
+        });
+      }
+
+      function escapeHtml(value) {
+        return value.replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]);
+      }
+
+      function showStatus(message, isError = false) {
+        status.textContent = message;
+        status.classList.toggle('error', isError);
+        status.classList.add('visible');
+      }
+
+      function hideStatus() { status.classList.remove('visible', 'error'); }
+
+      function loadImage(url) {
+        return new Promise((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = () => reject(new Error('Fotoğraf açılamadı.'));
+          image.src = url;
+        });
+      }
+
+      async function prepareJpeg(photo) {
+        const image = await loadImage(photo.url);
+        const sourceWidth = image.naturalWidth || image.width;
+        const sourceHeight = image.naturalHeight || image.height;
+        const maxEdge = 2400;
+        const scale = Math.min(1, maxEdge / Math.max(sourceWidth, sourceHeight));
+        const width = Math.max(1, Math.round(sourceWidth * scale));
+        const height = Math.max(1, Math.round(sourceHeight * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext('2d', { alpha: false });
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, width, height);
+        context.drawImage(image, 0, 0, width, height);
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', .86));
+        if (!blob) throw new Error('Fotoğraf dönüştürülemedi.');
+        return { width, height, bytes: new Uint8Array(await blob.arrayBuffer()) };
+      }
+
+      function makePdf(images) {
+        const encoder = new TextEncoder();
+        const chunks = [];
+        const offsets = [];
+        let position = 0;
+        const add = value => {
+          const bytes = typeof value === 'string' ? encoder.encode(value) : value;
+          chunks.push(bytes);
+          position += bytes.length;
+        };
+        const object = (id, parts) => {
+          offsets[id] = position;
+          add(`${id} 0 obj\n`);
+          for (const part of parts) add(part);
+          add('\nendobj\n');
+        };
+
+        add('%PDF-1.4\n%\u00e2\u00e3\u00cf\u00d3\n');
+        object(1, ['<< /Type /Catalog /Pages 2 0 R >>']);
+        const pageRefs = images.map((_, i) => `${3 + i * 3} 0 R`).join(' ');
+        object(2, [`<< /Type /Pages /Count ${images.length} /Kids [${pageRefs}] >>`]);
+
+        images.forEach((image, index) => {
+          const pageId = 3 + index * 3;
+          const imageId = pageId + 1;
+          const contentId = pageId + 2;
+          const pageW = 595.28;
+          const pageH = 841.89;
+          const margin = 28;
+          const ratio = Math.min((pageW - margin * 2) / image.width, (pageH - margin * 2) / image.height);
+          const drawW = image.width * ratio;
+          const drawH = image.height * ratio;
+          const x = (pageW - drawW) / 2;
+          const y = (pageH - drawH) / 2;
+          const command = `q\n${drawW.toFixed(2)} 0 0 ${drawH.toFixed(2)} ${x.toFixed(2)} ${y.toFixed(2)} cm\n/Im${index + 1} Do\nQ`;
+          const commandBytes = encoder.encode(command);
+
+          object(pageId, [`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Resources << /XObject << /Im${index + 1} ${imageId} 0 R >> >> /Contents ${contentId} 0 R >>`]);
+          object(imageId, [
+            `<< /Type /XObject /Subtype /Image /Width ${image.width} /Height ${image.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${image.bytes.length} >>\nstream\n`,
+            image.bytes,
+            '\nendstream'
+          ]);
+          object(contentId, [`<< /Length ${commandBytes.length} >>\nstream\n`, commandBytes, '\nendstream']);
+        });
+
+        const xrefPosition = position;
+        const objectCount = 2 + images.length * 3;
+        add(`xref\n0 ${objectCount + 1}\n`);
+        add('0000000000 65535 f \n');
+        for (let id = 1; id <= objectCount; id++) add(`${String(offsets[id]).padStart(10, '0')} 00000 n \n`);
+        add(`trailer\n<< /Size ${objectCount + 1} /Root 1 0 R >>\nstartxref\n${xrefPosition}\n%%EOF`);
+        return new Blob(chunks, { type: 'application/pdf' });
+      }
+
+      async function buildPdf() {
+        if (!photos.length) return null;
+        downloadBtn.disabled = true;
+        downloadBtn.textContent = 'PDF hazırlanıyor…';
+        hideStatus();
+        try {
+          const images = [];
+          for (let i = 0; i < photos.length; i++) {
+            downloadBtn.textContent = `${i + 1}/${photos.length} hazırlanıyor…`;
+            images.push(await prepareJpeg(photos[i]));
+          }
+          lastPdf = makePdf(images);
+          showStatus(`PDF hazır — ${photos.length} sayfa.`);
+          if (navigator.canShare) shareBtn.hidden = false;
+          return lastPdf;
+        } catch (error) {
+          console.error(error);
+          showStatus('Bir fotoğraf işlenemedi. Farklı bir fotoğraf deneyebilirsin.', true);
+          return null;
+        } finally {
+          downloadBtn.disabled = false;
+          downloadBtn.textContent = 'PDF’yi Oluştur ve İndir';
+        }
+      }
+
+      function downloadBlob(blob) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `odev-${new Date().toISOString().slice(0, 10)}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      }
+
+      downloadBtn.addEventListener('click', async () => {
+        const pdf = lastPdf || await buildPdf();
+        if (pdf) downloadBlob(pdf);
+      });
+
+      shareBtn.addEventListener('click', async () => {
+        const pdf = lastPdf || await buildPdf();
+        if (!pdf) return;
+        const file = new File([pdf], `odev-${new Date().toISOString().slice(0, 10)}.pdf`, { type: 'application/pdf' });
+        try {
+          if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: 'Ödev PDF' });
+          else downloadBlob(pdf);
+        } catch (error) {
+          if (error.name !== 'AbortError') downloadBlob(pdf);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
